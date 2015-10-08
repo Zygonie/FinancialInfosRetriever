@@ -17,7 +17,7 @@ class FinancialInfos:
         self.earningPerShare = None
         self.priceEarningRatio = None
         self.bookValuePerShare = None
-        self.industry = None
+        self.sector = None
         self.payout = None
         self.dividend = None
         self.dividendYield = None
@@ -31,86 +31,88 @@ class FinancialInfos:
         return json.dumps(seriazable_object, indent=4)
 
 def RetrieveInfos():
-    # Ouverture de la page web
-    urlWSJ = u'http://quotes.wsj.com/CA/XTSE/RY/financials'
-    urlTMXquote = u'http://web.tmxmoney.com/quote.php?qm_symbol=RY'
-    urlTMXcmpy = u'http://web.tmxmoney.com/company.php?qm_symbol=RY'
+    symbols = {'RY','CM','PWF','BNS','MFC','FTS','TRP','AGF.B','BMO','HSE','TD','ENB','TA','FCR','CU','ESI','MTL',
+               'RCI.B','WN','PSI','CJR.B','TRI','CP','COS','LNF','ECA','TCL.A','CFW','BTE','FTT','SNC','CPG','BDT',
+               'CTY','IMO','POT','EMA','BCE','MDI','BBD.B','TCK.B'}
 
-    requestWSJ = http.get(urlWSJ)
-    htmlWSJ = requestWSJ.text  # .decode('utf-8')
-    htmlWSJ = unicodedata.normalize('NFKD', htmlWSJ).encode('ASCII', 'ignore')
-    source_site_codeWSJ = BeautifulSoup.BeautifulSoup(htmlWSJ, "html.parser")
+    for symbol in symbols:
+        # Ouverture de la page web
+        urlWSJ = u'http://quotes.wsj.com/CA/XTSE/' + symbol + '/financials'
+        urlTMXquote = u'http://web.tmxmoney.com/quote.php?qm_symbol=' + symbol
+        urlTMXcmpy = u'http://web.tmxmoney.com/company.php?qm_symbol=' + symbol
 
-    requestTMXquote = http.get(urlTMXquote)
-    htmlTMXquote = requestTMXquote.text  # .decode('utf-8')
-    htmlTMXquote = unicodedata.normalize('NFKD', htmlTMXquote).encode('ASCII', 'ignore')
-    source_site_codeTMXquote = BeautifulSoup.BeautifulSoup(htmlTMXquote, "html.parser")
+        requestWSJ = http.get(urlWSJ)
+        htmlWSJ = requestWSJ.text  # .decode('utf-8')
+        htmlWSJ = unicodedata.normalize('NFKD', htmlWSJ).encode('ASCII', 'ignore')
+        source_site_codeWSJ = BeautifulSoup.BeautifulSoup(htmlWSJ, "html.parser")
 
-    requestTMXcmpy = http.get(urlTMXcmpy)
-    htmlTMXcmpy = requestTMXcmpy.text  # .decode('utf-8')
-    htmlTMXcmpy = unicodedata.normalize('NFKD', htmlTMXcmpy).encode('ASCII', 'ignore')
-    source_site_codeTMXcmpy = BeautifulSoup.BeautifulSoup(htmlTMXcmpy, "html.parser")
-    #with open('QuoteRY.html', mode='w') as file:
-    #        file.write(html)
-    
-    # re.compile pour utiliser une expression reguliere avec la methode
-    # 'match'.
-    # Ici on cherche tous les div dont l'id contient 'result'
-    resultsWSJ = source_site_codeWSJ.find_all('table')
-    financialInfos = FinancialInfos()
+        requestTMXquote = http.get(urlTMXquote)
+        htmlTMXquote = requestTMXquote.text  # .decode('utf-8')
+        htmlTMXquote = unicodedata.normalize('NFKD', htmlTMXquote).encode('ASCII', 'ignore')
+        source_site_codeTMXquote = BeautifulSoup.BeautifulSoup(htmlTMXquote, "html.parser")
 
-    for result in results:
-        # EPS
-        eps = result.find('span', text='Earnings Per Share')                
-        if eps is not None:
-            financialInfos.eps = eps.findNext('span').text;
-            m = re.search('((\d+\.\d*))', financialInfos.eps)
-            financialInfos.eps = m.group(1)
-            print 'EPS: {0}'.format(financialInfos.eps)
-        # Book Value Per Share
-        bvps = result.find('td', text='Book Value Per Share')        
-        if bvps is not None:
-            financialInfos.bookValuePerShare = bvps.findNext('td').text;
-            print 'Book Value Per Share: {0}'.format(financialInfos.bookValuePerShare)
-        # P/E ratio
+        requestTMXcmpy = http.get(urlTMXcmpy)
+        htmlTMXcmpy = requestTMXcmpy.text  # .decode('utf-8')
+        htmlTMXcmpy = unicodedata.normalize('NFKD', htmlTMXcmpy).encode('ASCII', 'ignore')
+        source_site_codeTMXcmpy = BeautifulSoup.BeautifulSoup(htmlTMXcmpy, "html.parser")
+        #with open('QuoteRY.html', mode='w') as file:
+        #        file.write(html)
+     
+        # re.compile pour utiliser une expression reguliere avec la methode
+        # 'match'.
+        # Ici on cherche tous les div dont l'id contient 'result'
+        resultsWSJ = source_site_codeWSJ.find_all('table')
+        resultsTMXquote = source_site_codeTMXquote.find_all('table')
+        resultsTMXcmpy = source_site_codeTMXcmpy.find_all('table')
+        financialInfos = FinancialInfos()
 
-    #Dans WSJ, on cherche
-    #* EPS
-    #<td> <span class="data_lbl">Earnings Per Share</span> <span class="data_data"> <span class="marketDelta deltaType-positive">+6.03</span> </span> </td>
-    #* Book to value per share
-    #<tr class="cr_financials_row"> <td class="data_lbl">Book Value Per Share</td> <td class="data_data">38.23</td> <td class="data_smallgraph"> <span class="data_data">-</span> </td> </tr>
-    #* P/E ratio
-    #<tr> <td> <span class="data_lbl updated-intraday">P/E Ratio <small class="data_meta">(TTM)</small></span> <span class="data_data"> <span class="marketDelta noChange">11.16</span> </span> </td> </tr>
+        for result in resultsWSJ:        
+            # Book Value Per Share
+            bvps = result.find('td', text='Book Value Per Share')        
+            if bvps is not None:
+                financialInfos.bookValuePerShare = bvps.findNext('td').text;
+                print 'Book Value Per Share: {0}'.format(financialInfos.bookValuePerShare)        
 
-    #Dans TMX quote
-    #* Dividende 
-    #* Yield
-    #* Calcul du payout ratio
-    #* Date du dividende
-    #* Frequence du dividende
-    #http://web.tmxmoney.com/quote.php?qm_symbol=RY
-    #<tr>
-    #   <td class="">Dividend:</td>
-	#   <td class="">0.790&nbsp;CAD</td>
-	#</tr>
-    #<tr class="alt">
-	#	<td class="">Div. Frequency:</td>
-	#	<td class="">Quaterly</td>
-	#</tr>
-    #<tr class="">
-	#	<td class="">Yield:</td>
-	#	<td class="">4,316</td>
-	#</tr>
-	#<tr class="alt">
-	#	<td class="">Ex-Div Date:</td>
-	#	<td class="">10/22/2015</td>	
-	#</tr>
+        for result in resultsTMXquote:
+            # Dividend
+            div = result.find('td', text='Dividend:')                
+            if div is not None:
+                financialInfos.dividend = div.findNext('td').text;
+                m = re.search('((\d+\.\d*))', financialInfos.dividend)
+                financialInfos.dividend = m.group(1)
+                print 'Dividend: {0}'.format(financialInfos.dividend)
+            # Div. Frequency
+            freq = result.find('td', text='Div. Frequency:')        
+            if freq is not None:  
+                dfreq = freq.findNext('td').text;          
+                print 'Dividend Frequency: {0}'.format(dfreq)
+            # Yield
+            divYield = result.find('td', text='Yield:')        
+            if divYield is not None:  
+                financialInfos.dividendYield = divYield.findNext('td').text;          
+                print 'Dividend Yield: {0}'.format(financialInfos.dividendYield)
+            #Ex-Div Date
+            date = result.find('td', text='Ex-Div Date:')        
+            if date is not None:  
+                financialInfos.dividendPeriod = date.findNext('td').text;          
+                print 'Date: {0}'.format(financialInfos.dividendPeriod)
+            # P/E ratio
+            per = result.find('td', text='P/E Ratio:')        
+            if per is not None:
+                financialInfos.priceEarningRatio = per.findNext('td').text;
+                print 'PER: {0}'.format(financialInfos.priceEarningRatio)
+            # EPS
+            eps = result.find('td', text='EPS:')                
+            if eps is not None:
+                financialInfos.eps = eps.findNext('td').text;
+                print 'EPS: {0}'.format(financialInfos.eps)
 
-    # Dans TMX compagny
-    #http://web.tmxmoney.com/company.php?qm_symbol=RY
-    # * Secteur 
-    #<td class="label">Sector:</td>
-    #<td class="data">Financial Services</td>)
+        for result in resultsTMXcmpy:
+            # Sector
+            sec = result.find('td', text='Sector:')                
+            if sec is not None:
+                financialInfos.sector = sec.findNext('td').text;
+                print 'Sector: {0}'.format(financialInfos.sector)
 
 # *****************************************
 # Main called function
