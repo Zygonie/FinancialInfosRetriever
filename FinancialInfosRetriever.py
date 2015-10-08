@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-__author__ = 'guillaume'
+ï»¿__author__ = 'guillaume'
 
 import requests as http
 import re  # regular expression
@@ -37,28 +35,44 @@ def RetrieveInfos():
     urlWSJ = u'http://quotes.wsj.com/CA/XTSE/RY/financials'
     urlTMXquote = u'http://web.tmxmoney.com/quote.php?qm_symbol=RY'
     urlTMXcmpy = u'http://web.tmxmoney.com/company.php?qm_symbol=RY'
-    request = http.get(urlWSJ)
-    html = request.text  # .decode('utf-8')
-    html = unicodedata.normalize('NFKD', html).encode('ASCII', 'ignore')
-    source_site_code = BeautifulSoup.BeautifulSoup(html, "html.parser")
+
+    requestWSJ = http.get(urlWSJ)
+    htmlWSJ = requestWSJ.text  # .decode('utf-8')
+    htmlWSJ = unicodedata.normalize('NFKD', htmlWSJ).encode('ASCII', 'ignore')
+    source_site_codeWSJ = BeautifulSoup.BeautifulSoup(htmlWSJ, "html.parser")
+
+    requestTMXquote = http.get(urlTMXquote)
+    htmlTMXquote = requestTMXquote.text  # .decode('utf-8')
+    htmlTMXquote = unicodedata.normalize('NFKD', htmlTMXquote).encode('ASCII', 'ignore')
+    source_site_codeTMXquote = BeautifulSoup.BeautifulSoup(htmlTMXquote, "html.parser")
+
+    requestTMXcmpy = http.get(urlTMXcmpy)
+    htmlTMXcmpy = requestTMXcmpy.text  # .decode('utf-8')
+    htmlTMXcmpy = unicodedata.normalize('NFKD', htmlTMXcmpy).encode('ASCII', 'ignore')
+    source_site_codeTMXcmpy = BeautifulSoup.BeautifulSoup(htmlTMXcmpy, "html.parser")
     #with open('QuoteRY.html', mode='w') as file:
     #        file.write(html)
     
     # re.compile pour utiliser une expression reguliere avec la methode
     # 'match'.
     # Ici on cherche tous les div dont l'id contient 'result'
-    results = source_site_code.find_all('table')
+    resultsWSJ = source_site_codeWSJ.find_all('table')
+    financialInfos = FinancialInfos()
 
     for result in results:
-        financialInfos = FinancialInfos()
-        eps = result.find('span', text='earnings per share')
-        print eps
-        financialInfos.eps = eps.parent.parent.findNext('td').content[0];
-        print financialInfos.eps
-        if financialInfos.eps is not None:
+        # EPS
+        eps = result.find('span', text='Earnings Per Share')                
+        if eps is not None:
+            financialInfos.eps = eps.findNext('span').text;
             m = re.search('((\d+\.\d*))', financialInfos.eps)
             financialInfos.eps = m.group(1)
-            print m.goup(1)
+            print 'EPS: {0}'.format(financialInfos.eps)
+        # Book Value Per Share
+        bvps = result.find('td', text='Book Value Per Share')        
+        if bvps is not None:
+            financialInfos.bookValuePerShare = bvps.findNext('td').text;
+            print 'Book Value Per Share: {0}'.format(financialInfos.bookValuePerShare)
+        # P/E ratio
 
     #Dans WSJ, on cherche
     #* EPS
@@ -74,26 +88,28 @@ def RetrieveInfos():
     #* Calcul du payout ratio
     #* Date du dividende
     #* Frequence du dividende
+    #http://web.tmxmoney.com/quote.php?qm_symbol=RY
     #<tr>
-    #   <td class="">Dividende:</td>
-	#   <td class="">0,790&nbsp;CAD</td>
+    #   <td class="">Dividend:</td>
+	#   <td class="">0.790&nbsp;CAD</td>
 	#</tr>
     #<tr class="alt">
-	#	<td class="">Fréquence de div:</td>
-	#	<td class="">trimestriel</td>
+	#	<td class="">Div. Frequency:</td>
+	#	<td class="">Quaterly</td>
 	#</tr>
     #<tr class="">
-	#	<td class="">Rendement:</td>
+	#	<td class="">Yield:</td>
 	#	<td class="">4,316</td>
 	#</tr>
 	#<tr class="alt">
-	#	<td class="">Date ex:</td>
+	#	<td class="">Ex-Div Date:</td>
 	#	<td class="">10/22/2015</td>	
 	#</tr>
 
     # Dans TMX compagny
+    #http://web.tmxmoney.com/company.php?qm_symbol=RY
     # * Secteur 
-    #<td class="label">Secteur:</td>
+    #<td class="label">Sector:</td>
     #<td class="data">Financial Services</td>)
 
 # *****************************************
