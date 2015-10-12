@@ -1,6 +1,7 @@
 ﻿__author__ = 'guillaume'
 
 import requests as http
+import math
 import re  # regular expression
 import bs4 as BeautifulSoup
 import json
@@ -9,11 +10,11 @@ import unicodedata
 import csv
 
 
-symbols = {'COS'}
+symbols = {'RY'}
 symbols = {'RY','CM','PWF','BNS','MFC','FTS','TRP','AGF.B','BMO','HSE','TD','ENB','TA','FCR','CU','ESI','MTL',
            'RCI.B','WN','PSI','CJR.B','TRI','CP','COS','LNF','ECA','TCL.A','CFW','BTE','FTT','SNC','CPG','BDT',
            'CTY','IMO','POT','EMA','BCE','MDI','BBD.B','TCK.B','NA','ENF','BDT','AI','FC','BDI','BNS','LB','ACD',
-           'BMO','MIC','POW','CM','CPX','SDY'}
+           'BMO','MIC','POW','CM','CPX','SDY','TD','AFN','SXP','WSP','SAP','CNQ','CVE','SU'}
 
 # *****************************************
 # Definition of the class WineItem
@@ -33,6 +34,10 @@ class FinancialInfos:
         self.urlWSJ = None
         self.urlTMXquote = None
         self.urlTMXcmpy = None
+        self.grahamPrice = None
+        self.ecartVsGraham = None
+        self.lastPrice = None
+        self.lastPriceDate = None
 
     def to_json(self):
         seriazable_object = self.__dict__
@@ -48,7 +53,8 @@ def jdefault(o):
 def writeToCsv(infos, filename):
     with open(filename, 'wb') as csvfile:
         fieldnames = ['name', 'code', 'sector', 'dividend', 'dividendYield', 'payout', 'dividendPeriod', \
-            'priceEarningRatio', 'earningPerShare', 'bookValuePerShare', 'urlWSJ', 'urlTMXquote', 'urlTMXcmpy']
+            'priceEarningRatio', 'earningPerShare', 'bookValuePerShare', 'lastPrice', 'lastPriceDate', \
+            'grahamPrice', 'ecartVsGraham', 'urlWSJ', 'urlTMXquote', 'urlTMXcmpy']
         #fieldnames = json.loads(infos[0].to_json()).keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -110,7 +116,6 @@ def RetrieveInfos(symbols):
                 if financialInfos.bookValuePerShare != 'N/A':
                     financialInfos.bookValuePerShare = float(financialInfos.bookValuePerShare)
                 print 'Book Value Per Share: {0}'.format(financialInfos.bookValuePerShare)
-
 
         dfreq = None
         month = None
@@ -189,6 +194,7 @@ def RetrieveInfos(symbols):
                 financialInfos.sector = sec.findNext('td').text;
                 print 'Sector: {0}'.format(financialInfos.sector)
 
+        # Payout
         if financialInfos.dividend is not None and financialInfos.earningPerShare is not None:
             financialInfos.payout = financialInfos.dividend * factor / financialInfos.earningPerShare
         else:
@@ -197,6 +203,35 @@ def RetrieveInfos(symbols):
             if financialInfos.earningPerShare is None:
                 financialInfos.earningPerShare = 'N/A'
             financialInfos.payout = 'N/A'
+
+        # Last price and date
+        financialInfos.lastPriceDate = 'N/A'
+        financialInfos.lastPrice = 'N/A'
+        quote_datetime = source_site_codeWSJ.find('span', {'id': 'quote_dateTime'})
+        if quote_datetime is not None:
+            m = re.search('(\d{2}/\d{2}/\d{2})', quote_datetime.text)
+            if m is not None:
+                financialInfos.lastPriceDate = m.group(1)
+
+        quote = source_site_codeWSJ.find('span', {'id': 'quote_val'})
+        if quote is not None:
+            m = re.search('(\d*\.\d*)', quote.text)
+            if m is not None:
+                    financialInfos.lastPrice = float(m.group(1))
+        print 'Last Price: {0}'.format(financialInfos.lastPrice)
+        print 'Last Price Date: {0}'.format(financialInfos.lastPriceDate)
+
+        # Graham
+        financialInfos.grahamPrice = 'N/A'
+        financialInfos.ecartVsGraham = 'N/A'
+        if financialInfos.earningPerShare != 'N/A' and \
+            financialInfos.bookValuePerShare != 'N/A' and \
+            financialInfos.bookValuePerShare is not None and \
+            financialInfos.earningPerShare > 0:
+            financialInfos.grahamPrice = math.sqrt(22.5 * financialInfos.earningPerShare * financialInfos.bookValuePerShare)
+
+        if financialInfos.grahamPrice != 'N/A' and financialInfos.lastPrice != 'N/A':
+            financialInfos.ecartVsGraham = 100 * (financialInfos.lastPrice - financialInfos.grahamPrice) / financialInfos.grahamPrice
 
         listOfCompagnies.append(financialInfos)
 
